@@ -1,0 +1,498 @@
+{% extends "base.html" %} {% block title %}{{ publication.title }} - The Sauce{%
+endblock %} {% block content %}
+<div class="watch-container">
+    <!-- Video Player -->
+    <div class="video-player">
+        <video controls autoplay>
+            <source
+                src="{{ url_for('static', filename='uploads/' + publication.filename) }}"
+                type="video/mp4"
+            />
+            Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+    </div>
+
+    <!-- Video Info -->
+    <div class="video-details">
+        <div>
+            <h1 class="mb-2">{{ publication.title }}</h1>
+
+            <div class="d-flex gap-2 align-center mb-3">
+                <span class="text-muted">
+                    <i class="fas fa-eye"></i> {{ publication.views }} vues
+                </span>
+                <span class="text-muted">•</span>
+                <span class="text-muted">
+                    <i class="fas fa-calendar"></i> {{
+                    publication.created_at.strftime('%d/%m/%Y') }}
+                </span>
+                {% if publication.status != 'approved' %}
+                <span class="badge badge-warning">
+                    <i class="fas fa-hourglass-half"></i> {{ publication.status
+                    }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Author Info -->
+            <div class="card">
+                <div class="d-flex gap-2 align-center">
+                    <a
+                        href="{{ url_for('view_user', username=publication.username) }}"
+                    >
+                        {% if author.avatar %}
+                        <img
+                            src="{{ url_for('static', filename='avatars/' + author.avatar) }}"
+                            alt="{{ author.fullname }}"
+                            class="user-avatar"
+                            style="width: 60px; height: 60px"
+                        />
+                        {% else %}
+                        <div
+                            class="user-avatar-placeholder"
+                            style="width: 60px; height: 60px; font-size: 1.5rem"
+                        >
+                            <i class="fas fa-user"></i>
+                        </div>
+                        {% endif %}
+                    </a>
+                    <div style="flex: 1">
+                        <a
+                            href="{{ url_for('view_user', username=publication.username) }}"
+                        >
+                            <h3>{{ author.fullname }}</h3>
+                        </a>
+                        <p class="text-muted">@{{ publication.username }}</p>
+                    </div>
+                    {% if session.get('username') and session.get('username') !=
+                    publication.username %}
+                    <a
+                        href="{{ url_for('chat', username=publication.username) }}"
+                        class="btn btn-primary"
+                    >
+                        <i class="fas fa-comment"></i> Discuter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if publication.description %}
+            <div class="card mt-3">
+                <h4 class="mb-2">
+                    <i class="fas fa-info-circle"></i> Description
+                </h4>
+                <p class="text-muted">{{ publication.description }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Section Commentaires -->
+            <div class="card mt-3 comments-section">
+                <h4 class="mb-3">
+                    <i class="fas fa-comments"></i> Commentaires
+                    <span class="comment-count" id="commentCount">(0)</span>
+                </h4>
+
+                {% if session.get('username') %}
+                <div class="comment-form mb-3">
+                    <div class="d-flex gap-2">
+                        <div
+                            class="user-avatar-placeholder"
+                            style="width: 40px; height: 40px; flex-shrink: 0"
+                        >
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div style="flex: 1">
+                            <textarea
+                                id="commentInput"
+                                class="form-control"
+                                placeholder="Ajouter un commentaire..."
+                                rows="2"
+                                maxlength="1000"
+                            ></textarea>
+                            <div
+                                class="d-flex justify-between align-center mt-2"
+                            >
+                                <small class="text-muted">
+                                    <span id="charCount">0</span>/1000
+                                </small>
+                                <button
+                                    class="btn btn-primary btn-sm"
+                                    onclick="submitComment()"
+                                >
+                                    <i class="fas fa-paper-plane"></i> Envoyer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div
+                    class="text-center mb-3 p-3"
+                    style="
+                        background: var(--bg-darker);
+                        border-radius: var(--border-radius);
+                    "
+                >
+                    <p class="text-muted mb-2">Connectez-vous pour commenter</p>
+                    <a
+                        href="{{ url_for('login') }}"
+                        class="btn btn-primary btn-sm"
+                    >
+                        <i class="fas fa-sign-in-alt"></i> Connexion
+                    </a>
+                </div>
+                {% endif %}
+
+                <div class="comments-list" id="commentsList">
+                    <div
+                        class="text-center text-muted py-3"
+                        id="commentsLoading"
+                    >
+                        <i class="fas fa-spinner fa-spin"></i> Chargement des
+                        commentaires...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="video-actions">
+            {% if session.get('username') %}
+            <button class="like-btn" id="likeBtn" onclick="likeVideo()">
+                <i class="fas fa-heart"></i>
+                <span id="likeCount">{{ publication.likes }}</span>
+            </button>
+            {% else %}
+            <a
+                href="{{ url_for('login') }}"
+                class="like-btn"
+                title="Connectez-vous pour liker"
+            >
+                <i class="fas fa-heart"></i>
+                <span>{{ publication.likes }}</span>
+            </a>
+            {% endif %}
+
+            <button class="like-btn" onclick="shareVideo()" title="Partager">
+                <i class="fas fa-share"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="mt-4">
+    <a href="{{ url_for('publications') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i>
+        Retour aux publications
+    </a>
+</div>
+
+<style>
+    .comments-section .comment-count {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: normal;
+    }
+
+    .comment-form textarea {
+        background: var(--bg-darker);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        color: var(--text-color);
+        padding: 0.75rem;
+        width: 100%;
+        resize: none;
+        font-family: inherit;
+    }
+
+    .comment-form textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .comment-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .comment-item:last-child {
+        border-bottom: none;
+    }
+
+    .comment-item .comment-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--bg-darker);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .comment-item .comment-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .comment-item .comment-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .comment-item .comment-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .comment-item .comment-author {
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .comment-item .comment-author:hover {
+        color: var(--primary-color);
+    }
+
+    .comment-item .comment-time {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .comment-item .comment-text {
+        color: var(--text-color);
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+
+    .comment-item .comment-actions {
+        margin-top: 0.5rem;
+    }
+
+    .comment-item .comment-actions button {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+    }
+
+    .comment-item .comment-actions button:hover {
+        background: var(--bg-darker);
+        color: var(--danger-color);
+    }
+
+    .comments-empty {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+    }
+
+    .comments-empty i {
+        font-size: 2rem;
+        opacity: 0.3;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+    let liked = false;
+
+    function likeVideo() {
+        if (liked) {
+            return;
+        }
+
+        fetch("/like/{{ publication.id }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    liked = true;
+                    document.getElementById("likeCount").textContent =
+                        data.likes;
+                    document.getElementById("likeBtn").classList.add("liked");
+                }
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+    }
+
+    function shareVideo() {
+        const url = window.location.href;
+
+        if (navigator.share) {
+            navigator
+                .share({
+                    title: "{{ publication.title }}",
+                    text: "Regardez cette vidéo sur The Sauce !",
+                    url: url,
+                })
+                .catch(console.error);
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard
+                .writeText(url)
+                .then(() => {
+                    alert("Lien copié dans le presse-papiers !");
+                })
+                .catch(() => {
+                    prompt("Copiez ce lien :", url);
+                });
+        }
+    }
+
+    // ============== Commentaires ==============
+
+    const publicationId = {{ publication.id }};
+    const currentUsername = '{{ session.get("username", "") }}';
+
+    // Charger les commentaires au démarrage
+    document.addEventListener('DOMContentLoaded', loadComments);
+
+    // Compteur de caractères
+    const commentInput = document.getElementById('commentInput');
+    if (commentInput) {
+        commentInput.addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+    }
+
+    function loadComments() {
+        fetch(`/comments/${publicationId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderComments(data.comments);
+                    document.getElementById('commentCount').textContent = `(${data.count})`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading comments:', error);
+                document.getElementById('commentsList').innerHTML = `
+                    <div class="comments-empty">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Erreur lors du chargement des commentaires</p>
+                    </div>
+                `;
+            });
+    }
+
+    function renderComments(comments) {
+        const list = document.getElementById('commentsList');
+
+        if (!comments || comments.length === 0) {
+            list.innerHTML = `
+                <div class="comments-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>Aucun commentaire pour le moment</p>
+                    <small>Soyez le premier à commenter !</small>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = comments.map(comment => `
+            <div class="comment-item" data-id="${comment.id}">
+                <div class="comment-avatar">
+                    ${comment.avatar
+                        ? `<img src="/static/avatars/${comment.avatar}" alt="${comment.fullname}">`
+                        : `<i class="fas fa-user"></i>`}
+                </div>
+                <div class="comment-body">
+                    <div class="comment-header">
+                        <a href="/user/${comment.username}" class="comment-author">${escapeHtml(comment.fullname)}</a>
+                        <span class="comment-time">${comment.time_ago}</span>
+                    </div>
+                    <div class="comment-text">${escapeHtml(comment.content)}</div>
+                    ${(comment.username === currentUsername || '{{ session.get("role") }}' === 'admin')
+                        ? `<div class="comment-actions">
+                            <button onclick="deleteComment(${comment.id})">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                           </div>`
+                        : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function submitComment() {
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+
+        if (!content) {
+            alert('Veuillez entrer un commentaire');
+            return;
+        }
+
+        if (content.length > 1000) {
+            alert('Le commentaire est trop long (max 1000 caractères)');
+            return;
+        }
+
+        fetch(`/comment/${publicationId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                document.getElementById('charCount').textContent = '0';
+                loadComments(); // Recharger les commentaires
+            } else {
+                alert(data.error || 'Erreur lors de l\'envoi du commentaire');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de l\'envoi du commentaire');
+        });
+    }
+
+    function deleteComment(commentId) {
+        if (!confirm('Supprimer ce commentaire ?')) return;
+
+        fetch(`/comment/${commentId}/delete`, {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadComments(); // Recharger les commentaires
+            } else {
+                alert(data.error || 'Erreur lors de la suppression');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+</script>
+{% endblock %}

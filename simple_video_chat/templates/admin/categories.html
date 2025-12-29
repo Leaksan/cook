@@ -1,0 +1,195 @@
+{% extends "base.html" %} {% block title %}Gestion des catégories - The Sauce{%
+endblock %} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-folder"></i>
+        Gestion des catégories
+    </h1>
+</div>
+
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <nav>
+            <ul class="admin-nav">
+                <li>
+                    <a href="{{ url_for('admin') }}" class="admin-nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Tableau de bord
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_users') }}"
+                        class="admin-nav-link"
+                    >
+                        <i class="fas fa-users"></i>
+                        Utilisateurs
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_publications') }}"
+                        class="admin-nav-link"
+                    >
+                        <i class="fas fa-video"></i>
+                        Publications
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_categories') }}"
+                        class="admin-nav-link active"
+                    >
+                        <i class="fas fa-folder"></i>
+                        Catégories
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('index') }}" class="admin-nav-link">
+                        <i class="fas fa-home"></i>
+                        Retour au site
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <div class="d-flex justify-between align-center mb-4">
+            <h2>
+                <i class="fas fa-tags"></i>
+                Catégories ({{ categories|length }})
+            </h2>
+        </div>
+
+        <!-- Add Category Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Ajouter une catégorie
+                </h3>
+            </div>
+            <form
+                method="POST"
+                action="{{ url_for('admin_add_category') }}"
+                class="d-flex gap-2 align-center"
+            >
+                <input
+                    type="text"
+                    class="form-control"
+                    name="name"
+                    placeholder="Nom de la catégorie"
+                    required
+                    minlength="2"
+                    maxlength="50"
+                    style="flex: 1"
+                />
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Ajouter
+                </button>
+            </form>
+        </div>
+
+        <!-- Categories List -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list"></i>
+                    Liste des catégories
+                </h3>
+            </div>
+
+            {% if categories %}
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px">#</th>
+                            <th>Nom</th>
+                            <th style="width: 150px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cat in categories %}
+                        <tr>
+                            <td>
+                                <span class="text-muted">{{ loop.index }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-primary">
+                                    <i class="fas fa-folder"></i>
+                                    {{ cat.name }}
+                                </span>
+                            </td>
+                            <td>
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('admin_delete_category', category_id=cat.id) }}"
+                                    style="display: inline"
+                                    onsubmit="return confirmDelete('{{ cat.name }}')"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        title="Supprimer"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                        Supprimer
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <h3>Aucune catégorie</h3>
+                <p class="text-muted">
+                    Ajoutez des catégories pour organiser les vidéos.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Info Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4 class="card-title">
+                    <i class="fas fa-info-circle"></i>
+                    À propos des catégories
+                </h4>
+            </div>
+            <p class="text-muted">
+                Les catégories permettent aux utilisateurs de classer leurs
+                vidéos lors de la publication. Elles apparaissent également
+                comme filtres sur la page des vidéos.
+            </p>
+            <ul class="text-muted" style="margin-left: 1.5rem">
+                <li>
+                    Les utilisateurs doivent choisir une catégorie lors de
+                    l'upload
+                </li>
+                <li>
+                    Supprimer une catégorie ne supprime pas les vidéos associées
+                </li>
+                <li>Les catégories sont affichées par ordre d'ajout</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    function confirmDelete(name) {
+        return confirm(
+            'Êtes-vous sûr de vouloir supprimer la catégorie "' + name + '" ?',
+        );
+    }
+</script>
+{% endblock %}

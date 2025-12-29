@@ -1,0 +1,206 @@
+{% extends "base.html" %} {% block title %}{{ user.fullname }} - StreamBox{%
+endblock %} {% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div>
+        {% if user.avatar %}
+        <img
+            src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+            alt="{{ user.fullname }}"
+            class="profile-avatar"
+        />
+        {% else %}
+        <div class="profile-avatar-placeholder">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="profile-info" style="flex: 1">
+        <div class="d-flex align-center gap-2">
+            <h1>{{ user.fullname }}</h1>
+            {% if is_online %}
+            <span class="badge badge-success">
+                <i class="fas fa-circle"></i> En ligne
+            </span>
+            {% else %}
+            <span class="badge badge-info">
+                <i class="fas fa-circle"></i> Hors ligne
+            </span>
+            {% endif %}
+        </div>
+        <p class="username text-muted">@{{ user.username }}</p>
+
+        {% if user.bio %}
+        <p class="mt-2">{{ user.bio }}</p>
+        {% endif %} {% if user.email and session.get('role') == 'admin' %}
+        <p class="text-muted mt-1">
+            <i class="fas fa-envelope"></i> {{ user.email }}
+        </p>
+        {% endif %}
+
+        <div class="profile-stats mt-3">
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ publications|length }}</div>
+                <div class="profile-stat-label">Publications</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">
+                    {% set total_views = publications|map(attribute='views')|sum
+                    %} {{ total_views }}
+                </div>
+                <div class="profile-stat-label">Vues totales</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">
+                    {% set total_likes = publications|map(attribute='likes')|sum
+                    %} {{ total_likes }}
+                </div>
+                <div class="profile-stat-label">J'aime</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    {% if session.get('username') and session.get('username') != user.username
+    %}
+    <div class="d-flex gap-1" style="flex-direction: column">
+        <a
+            href="{{ url_for('chat', username=user.username) }}"
+            class="btn btn-primary"
+        >
+            <i class="fas fa-comment"></i> Discuter
+        </a>
+        {% if is_online %}
+        <button
+            class="btn btn-accent"
+            onclick="initiateCall('{{ user.username }}')"
+        >
+            <i class="fas fa-video"></i> Appel vidéo
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- User Publications -->
+<section class="mt-4">
+    <h2 class="mb-3">
+        <i class="fas fa-video"></i>
+        Publications de {{ user.fullname }}
+    </h2>
+
+    {% if publications %}
+    <div class="videos-grid">
+        {% for pub in publications %}
+        <div class="video-card">
+            <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                <div class="video-thumbnail">
+                    <video preload="metadata" muted>
+                        <source
+                            src="{{ url_for('static', filename='uploads/' + pub.filename) }}#t=0.5"
+                            type="video/mp4"
+                        />
+                    </video>
+                    <div class="video-play-overlay">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                </div>
+            </a>
+            <div class="video-info">
+                <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                    <h3 class="video-title">{{ pub.title }}</h3>
+                </a>
+                <div class="video-meta">
+                    <div class="video-stats">
+                        <span title="Vues">
+                            <i class="fas fa-eye"></i>
+                            {{ pub.views }}
+                        </span>
+                        <span title="J'aime">
+                            <i class="fas fa-heart"></i>
+                            {{ pub.likes }}
+                        </span>
+                    </div>
+                </div>
+                <p class="text-muted mt-1" style="font-size: 0.75rem">
+                    <i class="fas fa-calendar"></i>
+                    {{ pub.created_at.strftime('%d/%m/%Y') }}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-film"></i>
+        <h3>Aucune publication</h3>
+        <p class="text-muted">
+            {{ user.fullname }} n'a pas encore publié de vidéo.
+        </p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Back Button -->
+<div class="mt-4">
+    <a href="{{ url_for('rencontres') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i>
+        Retour aux rencontres
+    </a>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    // Auto-load video thumbnails
+    document.querySelectorAll('.video-thumbnail video').forEach(video => {
+        video.addEventListener('loadedmetadata', function() {
+            this.currentTime = 0.5;
+        });
+        video.addEventListener('seeked', function() {
+            this.pause();
+        });
+    });
+
+    // Hover preview
+    document.querySelectorAll('.video-card').forEach(card => {
+        const video = card.querySelector('video');
+        if (video) {
+            card.addEventListener('mouseenter', () => {
+                video.play().catch(() => {});
+            });
+            card.addEventListener('mouseleave', () => {
+                video.pause();
+                video.currentTime = 0.5;
+            });
+        }
+    });
+
+    {% if session.get('username') %}
+    function initiateCall(username) {
+        if (typeof socket !== 'undefined') {
+            const room = [
+                '{{ session.get("username") }}',
+                username
+            ].sort().join('_');
+
+            socket.emit('call_request', {
+                target: username,
+                room: room
+            });
+
+            // Redirect to chat with call parameter
+            window.location.href = '/chat/' + username + '?call=true';
+        } else {
+            alert('Erreur de connexion. Veuillez rafraîchir la page.');
+        }
+    }
+
+    // Listen for call responses
+    socket.on('call_response', function(data) {
+        if (!data.accepted) {
+            alert(data.responder + ' a refusé votre appel.');
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

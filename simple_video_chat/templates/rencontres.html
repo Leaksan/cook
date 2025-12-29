@@ -1,0 +1,210 @@
+{% extends "base.html" %} {% block title %}Rencontres - StreamBox{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-heart"></i>
+        Rencontres
+    </h1>
+    <div class="d-flex gap-1 align-center">
+        <span class="badge badge-success">
+            <i class="fas fa-circle"></i>
+            {{ online_users|length }} en ligne
+        </span>
+    </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card mb-4">
+    <div class="d-flex gap-2 align-center" style="flex-wrap: wrap">
+        <div style="flex: 1; min-width: 200px">
+            <input
+                type="text"
+                class="form-control"
+                id="searchUsers"
+                placeholder="Rechercher un utilisateur..."
+                oninput="filterUsers()"
+            />
+        </div>
+        <div class="d-flex gap-1">
+            <button
+                class="btn btn-primary btn-sm filter-btn active"
+                data-filter="all"
+                onclick="setFilter('all')"
+            >
+                <i class="fas fa-users"></i> Tous
+            </button>
+            <button
+                class="btn btn-outline btn-sm filter-btn"
+                data-filter="online"
+                onclick="setFilter('online')"
+            >
+                <i
+                    class="fas fa-circle"
+                    style="color: var(--success-color)"
+                ></i>
+                En ligne
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Users Grid -->
+{% if users %}
+<div class="users-grid" id="usersGrid">
+    {% for user in users %}
+    <div
+        class="user-card {% if user.online %}online{% endif %}"
+        data-username="{{ user.username }}"
+        data-fullname="{{ user.fullname|lower }}"
+        data-online="{{ 'true' if user.online else 'false' }}"
+    >
+        {% if user.avatar %}
+        <img
+            src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+            alt="{{ user.fullname }}"
+            class="user-avatar"
+        />
+        {% else %}
+        <div class="user-avatar-placeholder">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+
+        <h4 class="user-name">{{ user.fullname }}</h4>
+        <p class="user-username">@{{ user.username }}</p>
+
+        {% if user.bio %}
+        <p class="user-bio">{{ user.bio }}</p>
+        {% endif %}
+
+        <span
+            class="user-status {% if user.online %}online{% else %}offline{% endif %}"
+        >
+            <i class="fas fa-circle"></i>
+            {% if user.online %}En ligne{% else %}Hors ligne{% endif %}
+        </span>
+
+        <div class="d-flex gap-1 justify-center mt-2">
+            <a
+                href="{{ url_for('view_user', username=user.username) }}"
+                class="btn btn-outline btn-sm"
+            >
+                <i class="fas fa-user"></i> Profil
+            </a>
+            <a
+                href="{{ url_for('chat', username=user.username) }}"
+                class="btn btn-primary btn-sm"
+            >
+                <i class="fas fa-comment"></i> Discuter
+            </a>
+        </div>
+
+        {% if user.online %}
+        <button
+            class="btn btn-accent btn-sm btn-block mt-2"
+            onclick="initiateCall('{{ user.username }}')"
+        >
+            <i class="fas fa-video"></i> Appel vidéo
+        </button>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="fas fa-users-slash"></i>
+    <h3>Aucun utilisateur trouvé</h3>
+    <p>Invitez vos amis à rejoindre StreamBox !</p>
+</div>
+{% endif %}
+
+<!-- No Results Message (hidden by default) -->
+<div class="empty-state hidden" id="noResults">
+    <i class="fas fa-search"></i>
+    <h3>Aucun résultat</h3>
+    <p>Aucun utilisateur ne correspond à votre recherche.</p>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    let currentFilter = 'all';
+
+    function filterUsers() {
+        const searchValue = document.getElementById('searchUsers').value.toLowerCase();
+        const cards = document.querySelectorAll('.user-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const fullname = card.dataset.fullname;
+            const username = card.dataset.username.toLowerCase();
+            const isOnline = card.dataset.online === 'true';
+
+            let matchesSearch = fullname.includes(searchValue) || username.includes(searchValue);
+            let matchesFilter = currentFilter === 'all' || (currentFilter === 'online' && isOnline);
+
+            if (matchesSearch && matchesFilter) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        const noResults = document.getElementById('noResults');
+        const usersGrid = document.getElementById('usersGrid');
+
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+            if (usersGrid) usersGrid.style.display = 'none';
+        } else {
+            noResults.classList.add('hidden');
+            if (usersGrid) usersGrid.style.display = '';
+        }
+    }
+
+    function setFilter(filter) {
+        currentFilter = filter;
+
+        // Update button states
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.dataset.filter === filter) {
+                btn.classList.remove('btn-outline');
+                btn.classList.add('btn-primary', 'active');
+            } else {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-outline');
+            }
+        });
+
+        filterUsers();
+    }
+
+    function initiateCall(username) {
+        if (typeof socket !== 'undefined') {
+            const room = [
+                '{{ session.get("username") }}',
+                username
+            ].sort().join('_');
+
+            socket.emit('call_request', {
+                target: username,
+                room: room
+            });
+
+            // Redirect to chat with call parameter
+            window.location.href = '/chat/' + username + '?call=true';
+        } else {
+            alert('Erreur de connexion. Veuillez rafraîchir la page.');
+        }
+    }
+
+    // Listen for call responses
+    {% if session.get('username') %}
+    socket.on('call_response', function(data) {
+        if (!data.accepted) {
+            alert(data.responder + ' a refusé votre appel.');
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

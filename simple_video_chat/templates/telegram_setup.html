@@ -1,0 +1,243 @@
+{% extends "base.html" %} {% block title %}Configuration Telegram Admin - The
+Sauce{% endblock %} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fab fa-telegram"></i>
+        Configuration Telegram (Admin)
+    </h1>
+    <a href="{{ url_for('profile') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i>
+        Retour au profil
+    </a>
+</div>
+
+<div style="max-width: 800px; margin: 0 auto">
+    <!-- Info Box -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-shield-alt"></i>
+        <strong>Fonction Admin</strong> - Cette page vous permet de recevoir
+        TOUTES les photos ephemeres echangees entre les utilisateurs de la
+        plateforme sur votre Telegram.
+    </div>
+
+    <!-- Current Status -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-info-circle"></i>
+                Statut actuel
+            </h3>
+        </div>
+        {% if user.telegram_chat_id %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            <strong>Telegram configure!</strong> Votre Chat ID:
+            <code>{{ user.telegram_chat_id }}</code>
+        </div>
+        <p class="text-muted">
+            Vous recevrez automatiquement toutes les photos ephemeres envoyees
+            sur la plateforme.
+        </p>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Telegram non configure.</strong> Suivez les etapes
+            ci-dessous pour activer la reception des photos.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- What you'll receive -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-eye"></i>
+                Ce que vous recevrez
+            </h3>
+        </div>
+        <ul style="margin-left: 1.5rem; margin-bottom: 0">
+            <li>Toutes les photos ephemeres envoyees entre utilisateurs</li>
+            <li>Le nom de l'expediteur et du destinataire</li>
+            <li>L'heure d'envoi</li>
+            <li>La photo en piece jointe</li>
+        </ul>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-list-ol"></i>
+                Comment configurer
+            </h3>
+        </div>
+
+        <div class="mb-3">
+            <h4>Etape 1: Ouvrir le bot Telegram</h4>
+            <p class="text-muted">
+                Cliquez sur le lien ci-dessous pour ouvrir le bot Telegram:
+            </p>
+            <a
+                href="https://t.me/Recever_picbot"
+                target="_blank"
+                class="btn btn-primary"
+            >
+                <i class="fab fa-telegram"></i>
+                Ouvrir @Recever_picbot
+            </a>
+        </div>
+
+        <div class="mb-3">
+            <h4>Etape 2: Demarrer le bot</h4>
+            <p class="text-muted">
+                Envoyez le message <code>/start</code> au bot ou cliquez sur le
+                bouton "Demarrer".
+            </p>
+        </div>
+
+        <div class="mb-3">
+            <h4>Etape 3: Recuperer votre Chat ID</h4>
+            <p class="text-muted">
+                Cliquez sur le bouton ci-dessous pour detecter automatiquement
+                votre Chat ID:
+            </p>
+            <button class="btn btn-accent" onclick="checkTelegramUpdates()">
+                <i class="fas fa-search"></i>
+                Rechercher mon Chat ID
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div id="telegramResults" class="hidden mt-3">
+            <h4>Resultats:</h4>
+            <div id="chatsList"></div>
+        </div>
+    </div>
+
+    <!-- Manual Entry -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-keyboard"></i>
+                Saisie manuelle
+            </h3>
+        </div>
+        <p class="text-muted mb-3">
+            Si vous connaissez deja votre Chat ID, entrez-le ici:
+        </p>
+        <form
+            method="POST"
+            action="{{ url_for('telegram_save_chat_id') }}"
+            class="d-flex gap-2"
+        >
+            <input
+                type="text"
+                class="form-control"
+                name="chat_id"
+                placeholder="Entrez votre Chat ID (ex: 123456789)"
+                value="{{ user.telegram_chat_id or '' }}"
+                style="flex: 1"
+            />
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                Enregistrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Security Notice -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-lock"></i>
+                Note de securite
+            </h3>
+        </div>
+        <p class="text-muted mb-0">
+            En tant qu'administrateur, vous avez acces a toutes les photos
+            ephemeres pour des raisons de moderation et de securite de la
+            plateforme. Cette fonctionnalite n'est pas visible pour les
+            utilisateurs reguliers.
+        </p>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    async function checkTelegramUpdates() {
+        const resultsDiv = document.getElementById("telegramResults");
+        const chatsList = document.getElementById("chatsList");
+
+        resultsDiv.classList.remove("hidden");
+        chatsList.innerHTML =
+            '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</p>';
+
+        try {
+            const response = await fetch("/telegram/check_updates");
+            const data = await response.json();
+
+            if (data.success && data.chats && data.chats.length > 0) {
+                let html =
+                    '<div class="d-flex gap-2" style="flex-wrap: wrap;">';
+
+                // Utiliser un Set pour eviter les doublons
+                const uniqueChats = [];
+                const seenIds = new Set();
+
+                for (const chat of data.chats) {
+                    if (!seenIds.has(chat.chat_id)) {
+                        seenIds.add(chat.chat_id);
+                        uniqueChats.push(chat);
+                    }
+                }
+
+                for (const chat of uniqueChats) {
+                    const name =
+                        chat.first_name || chat.username || "Utilisateur";
+                    html += `
+                        <div class="card" style="padding: 1rem; min-width: 200px;">
+                            <p><strong>${name}</strong></p>
+                            <p class="text-muted">Chat ID: <code>${chat.chat_id}</code></p>
+                            <button class="btn btn-primary btn-sm" onclick="selectChatId('${chat.chat_id}')">
+                                <i class="fas fa-check"></i> Utiliser
+                            </button>
+                        </div>
+                    `;
+                }
+
+                html += "</div>";
+                chatsList.innerHTML = html;
+            } else if (
+                data.success &&
+                (!data.chats || data.chats.length === 0)
+            ) {
+                chatsList.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Aucun message trouve. Assurez-vous d'avoir envoye <code>/start</code> au bot et reessayez.
+                    </div>
+                `;
+            } else {
+                chatsList.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle"></i>
+                        Erreur: ${data.error || "Impossible de recuperer les donnees"}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            chatsList.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle"></i>
+                    Erreur de connexion: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function selectChatId(chatId) {
+        const input = document.querySelector('input[name="chat_id"]');
+        input.value = chatId;
+        input.form.submit();
+    }
+</script>
+{% endblock %}

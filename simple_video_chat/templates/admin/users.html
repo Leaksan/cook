@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des utilisateurs - The Sauce{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </h1>
+</div>
+
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <nav>
+            <ul class="admin-nav">
+                <li>
+                    <a href="{{ url_for('admin') }}" class="admin-nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Tableau de bord
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin_users') }}" class="admin-nav-link active">
+                        <i class="fas fa-users"></i>
+                        Utilisateurs
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin_publications') }}" class="admin-nav-link">
+                        <i class="fas fa-video"></i>
+                        Publications
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin_categories') }}" class="admin-nav-link">
+                        <i class="fas fa-folder"></i>
+                        Categories
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('index') }}" class="admin-nav-link">
+                        <i class="fas fa-home"></i>
+                        Retour au site
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <div class="d-flex justify-between align-center mb-4">
+            <h2>
+                <i class="fas fa-user-cog"></i>
+                Utilisateurs ({{ users|length }})
+            </h2>
+            <div class="d-flex gap-1">
+                <input
+                    type="text"
+                    class="form-control"
+                    id="searchInput"
+                    placeholder="Rechercher un utilisateur..."
+                    style="width: 250px;"
+                    onkeyup="filterUsers()"
+                />
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-container">
+            <table class="table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Statut</th>
+                        <th>En ligne</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr data-username="{{ user.username }}" data-fullname="{{ user.fullname|lower }}" data-email="{{ user.email|lower }}">
+                        <td>
+                            <div class="avatar-cell">
+                                {% if user.avatar %}
+                                    <img src="{{ url_for('static', filename='avatars/' + user.avatar) }}" alt="{{ user.fullname }}" />
+                                {% else %}
+                                    <div class="user-avatar-placeholder" style="width: 40px; height: 40px; font-size: 1rem;">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ user.fullname }}</strong>
+                                    <br />
+                                    <span class="text-muted" style="font-size: 0.8rem;">@{{ user.username }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge {% if user.role == 'admin' %}badge-primary{% else %}badge-info{% endif %}">
+                                {% if user.role == 'admin' %}
+                                    <i class="fas fa-crown"></i>
+                                {% else %}
+                                    <i class="fas fa-user"></i>
+                                {% endif %}
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-check"></i> Actif
+                                </span>
+                            {% else %}
+                                <span class="badge badge-danger">
+                                    <i class="fas fa-ban"></i> Desactive
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.online %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-circle"></i> En ligne
+                                </span>
+                            {% else %}
+                                <span class="badge badge-info" style="opacity: 0.5;">
+                                    <i class="fas fa-circle"></i> Hors ligne
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1" style="flex-wrap: wrap;">
+                                <!-- Toggle Active -->
+                                <form method="POST" action="{{ url_for('admin_toggle_user', user_id=user.id) }}" style="display: inline;">
+                                    {% if user.is_active %}
+                                        <button type="submit" class="btn btn-outline btn-sm" title="Desactiver">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-success btn-sm" title="Activer">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    {% endif %}
+                                </form>
+
+                                <!-- Change Role -->
+                                <form method="POST" action="{{ url_for('admin_change_role', user_id=user.id) }}" style="display: inline;">
+                                    {% if user.role == 'admin' %}
+                                        <input type="hidden" name="role" value="user" />
+                                        <button type="submit" class="btn btn-outline btn-sm" title="Retrograder en utilisateur" {% if user.id == session.get('user_id') %}disabled{% endif %}>
+                                            <i class="fas fa-user-minus"></i>
+                                        </button>
+                                    {% else %}
+                                        <input type="hidden" name="role" value="admin" />
+                                        <button type="submit" class="btn btn-primary btn-sm" title="Promouvoir admin">
+                                            <i class="fas fa-user-shield"></i>
+                                        </button>
+                                    {% endif %}
+                                </form>
+
+                                <!-- View Profile -->
+                                <a href="{{ url_for('view_user', username=user.username) }}" class="btn btn-outline btn-sm" title="Voir le profil">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <!-- Delete User -->
+                                {% if user.id != session.get('user_id') %}
+                                <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" style="display: inline;" onsubmit="return confirmDelete('{{ user.username }}')">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- No Results Message -->
+        <div class="empty-state hidden" id="noResults">
+            <i class="fas fa-search"></i>
+            <h3>Aucun resultat</h3>
+            <p>Aucun utilisateur ne correspond a votre recherche.</p>
+        </div>
+
+        <!-- Legend -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4 class="card-title">
+                    <i class="fas fa-info-circle"></i>
+                    Legende des actions
+                </h4>
+            </div>
+            <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                <span class="text-muted">
+                    <i class="fas fa-ban"></i> Desactiver / <i class="fas fa-check"></i> Activer
+                </span>
+                <span class="text-muted">|</span>
+                <span class="text-muted">
+                    <i class="fas fa-user-shield"></i> Promouvoir admin / <i class="fas fa-user-minus"></i> Retrograder
+                </span>
+                <span class="text-muted">|</span>
+                <span class="text-muted">
+                    <i class="fas fa-eye"></i> Voir profil
+                </span>
+                <span class="text-muted">|</span>
+                <span class="text-muted">
+                    <i class="fas fa-trash"></i> Supprimer
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterUsers() {
+        const searchValue = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#usersTable tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const username = row.dataset.username.toLowerCase();
+            const fullname = row.dataset.fullname;
+            const email = row.dataset.email;
+
+            if (username.includes(searchValue) || fullname.includes(searchValue) || email.includes(searchValue)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        const noResults = document.getElementById('noResults');
+        const tableContainer = document.querySelector('.table-container');
+
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+            tableContainer.style.display = 'none';
+        } else {
+            noResults.classList.add('hidden');
+            tableContainer.style.display = '';
+        }
+    }
+
+    function confirmDelete(username) {
+        return confirm('Etes-vous sur de vouloir supprimer l\'utilisateur "' + username + '" ?\n\nCette action est irreversible et supprimera egalement toutes ses publications.');
+    }
+</script>
+{% endblock %}

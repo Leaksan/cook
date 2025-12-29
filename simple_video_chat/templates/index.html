@@ -1,0 +1,201 @@
+{% extends "base.html" %} {% block title %}The Sauce - Plateforme de Streaming{%
+endblock %} {% block content %}
+
+<!-- Latest Videos Section -->
+<section>
+    <div class="d-flex justify-between align-center mb-3">
+        <h2>
+            <i class="fas fa-fire"></i>
+            Vidéos récentes
+        </h2>
+        <a href="{{ url_for('publications') }}" class="btn btn-outline">
+            <i class="fas fa-th"></i> Voir tout
+        </a>
+    </div>
+
+    {% if recent_publications %}
+    <div class="videos-grid">
+        {% for pub in recent_publications %}
+        <div class="video-card">
+            <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                <div class="video-thumbnail">
+                    <video preload="metadata" muted>
+                        <source
+                            src="{{ url_for('static', filename='uploads/' + pub.filename) }}#t=0.5"
+                            type="video/mp4"
+                        />
+                    </video>
+                    <div class="video-play-overlay">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                </div>
+            </a>
+            <div class="video-info">
+                <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                    <h3 class="video-title">{{ pub.title }}</h3>
+                </a>
+                {% if pub.category %}
+                <span
+                    class="badge badge-primary"
+                    style="font-size: 0.7rem; margin-bottom: 0.5rem"
+                >
+                    {{ pub.category }}
+                </span>
+                {% endif %}
+                <div class="video-meta">
+                    <a
+                        href="{{ url_for('view_user', username=pub.username) }}"
+                        class="video-author"
+                    >
+                        <div
+                            class="user-avatar-placeholder"
+                            style="width: 24px; height: 24px; font-size: 0.7rem"
+                        >
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span>{{ pub.username }}</span>
+                    </a>
+                    <div class="video-stats">
+                        <span title="Vues">
+                            <i class="fas fa-eye"></i>
+                            {{ pub.views }}
+                        </span>
+                        <span title="J'aime">
+                            <i class="fas fa-heart"></i>
+                            {{ pub.likes }}
+                        </span>
+                    </div>
+                </div>
+                <p class="text-muted mt-1" style="font-size: 0.75rem">
+                    <i class="fas fa-calendar"></i>
+                    {{ pub.created_at.strftime('%d/%m/%Y') }}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-film"></i>
+        <h3>Aucune vidéo pour le moment</h3>
+        <p class="text-muted">Soyez le premier à partager du contenu !</p>
+        {% if session.get('username') %}
+        <a href="{{ url_for('upload') }}" class="btn btn-primary mt-2">
+            <i class="fas fa-cloud-upload-alt"></i>
+            Publier une vidéo
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary mt-2">
+            <i class="fas fa-sign-in-alt"></i>
+            Connectez-vous pour publier
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- Secondary Features Section -->
+<section class="mt-4">
+    <div class="features-grid">
+        <!-- Main: Upload Videos -->
+        <div class="feature-card success">
+            <div class="feature-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h3>Publiez vos vidéos</h3>
+            <p>
+                Partagez vos créations avec la communauté et gagnez en
+                visibilité.
+            </p>
+            {% if session.get('username') %}
+            <a href="{{ url_for('upload') }}" class="btn btn-success btn-lg">
+                <i class="fas fa-plus"></i>
+                Publier maintenant
+            </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-success btn-lg">
+                <i class="fas fa-sign-in-alt"></i>
+                Connectez-vous pour publier
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Secondary: Rencontres -->
+        <div class="feature-card">
+            <div
+                class="feature-icon"
+                style="background: var(--gradient-accent)"
+            >
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>Rencontres</h3>
+            <p>Discutez en direct avec d'autres membres de la communauté.</p>
+            {% if session.get('username') %}
+            <a href="{{ url_for('rencontres') }}" class="btn btn-accent">
+                <i class="fas fa-comments"></i>
+                Explorer
+            </a>
+            <div class="mt-2">
+                <span class="badge badge-success">
+                    <i class="fas fa-circle"></i> {{ online_users|length }} en
+                    ligne
+                </span>
+            </div>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-outline">
+                <i class="fas fa-sign-in-alt"></i>
+                Connectez-vous pour accéder
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section for non-logged users -->
+{% if not session.get('username') %}
+<section class="card mt-4 text-center" style="padding: 2rem">
+    <h2 class="mb-2">
+        <i class="fas fa-user-plus"></i> Rejoignez la communauté
+    </h2>
+    <p class="text-muted mb-3">
+        Créez un compte pour publier des vidéos, commenter et discuter avec
+        d'autres membres.
+    </p>
+    <div class="d-flex gap-2 justify-center">
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus"></i>
+            S'inscrire gratuitement
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">
+            <i class="fas fa-sign-in-alt"></i>
+            Se connecter
+        </a>
+    </div>
+</section>
+{% endif %} {% endblock %} {% block scripts %}
+<script>
+    // Auto-load video thumbnails
+    document.querySelectorAll(".video-thumbnail video").forEach((video) => {
+        video.addEventListener("loadedmetadata", function () {
+            this.currentTime = 0.5;
+        });
+        video.addEventListener("seeked", function () {
+            this.pause();
+        });
+    });
+
+    // Hover preview
+    document.querySelectorAll(".video-card").forEach((card) => {
+        const video = card.querySelector("video");
+        if (video) {
+            card.addEventListener("mouseenter", () => {
+                video.play().catch(() => {});
+            });
+            card.addEventListener("mouseleave", () => {
+                video.pause();
+                video.currentTime = 0.5;
+            });
+        }
+    });
+</script>
+{% endblock %}

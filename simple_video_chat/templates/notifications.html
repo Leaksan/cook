@@ -1,0 +1,262 @@
+{% extends "base.html" %} {% block title %}Notifications - The Sauce{% endblock
+%} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-bell"></i>
+        Notifications
+    </h1>
+    {% if notifications %}
+    <button class="btn btn-outline" onclick="markAllRead()">
+        <i class="fas fa-check-double"></i>
+        Tout marquer comme lu
+    </button>
+    {% endif %}
+</div>
+
+<div class="notifications-page">
+    {% if notifications %}
+    <div class="notifications-list">
+        {% for notif in notifications %}
+        <div
+            class="notification-card {% if not notif.is_read %}unread{% endif %}"
+            data-id="{{ notif.id }}"
+            onclick="handleNotifClick({{ notif.id }}, '{{ notif.type }}', {{ notif.publication_id or 'null' }}, '{{ notif.sender.username if notif.sender else '' }}')"
+        >
+            <div class="notif-avatar">
+                {% if notif.sender and notif.sender.avatar %}
+                <img
+                    src="{{ url_for('static', filename='avatars/' + notif.sender.avatar) }}"
+                    alt=""
+                />
+                {% else %}
+                <i class="fas fa-user"></i>
+                {% endif %}
+            </div>
+            <div class="notif-body">
+                <p class="notif-text">{{ notif.content }}</p>
+                <div class="notif-meta">
+                    <span class="notif-time">
+                        <i class="fas fa-clock"></i>
+                        {{ notif.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                    </span>
+                    <span class="notif-type {{ notif.type }}">
+                        {% if notif.type == 'message' %}
+                        <i class="fas fa-envelope"></i> Message {% elif
+                        notif.type == 'comment' %}
+                        <i class="fas fa-comment"></i> Commentaire {% elif
+                        notif.type == 'like' %}
+                        <i class="fas fa-heart"></i> Like {% else %}
+                        <i class="fas fa-bell"></i> Notification {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% if not notif.is_read %}
+            <div class="notif-indicator"></div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-bell-slash"></i>
+        <h3>Aucune notification</h3>
+        <p class="text-muted">Vous n'avez pas encore reçu de notifications.</p>
+        <a href="{{ url_for('publications') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-video"></i>
+            Découvrir des vidéos
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .notifications-page {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .notifications-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .notification-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        background: var(--bg-card);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .notification-card:hover {
+        background: var(--bg-darker);
+        transform: translateX(5px);
+    }
+
+    .notification-card.unread {
+        background: linear-gradient(
+            135deg,
+            rgba(108, 92, 231, 0.1),
+            rgba(0, 206, 201, 0.05)
+        );
+        border-left: 3px solid var(--primary-color);
+    }
+
+    .notification-card .notif-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--bg-darker);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .notification-card .notif-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .notification-card .notif-avatar i {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+    }
+
+    .notification-card .notif-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .notification-card .notif-text {
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        color: var(--text-color);
+    }
+
+    .notification-card .notif-meta {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .notification-card .notif-type {
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+
+    .notification-card .notif-type.message {
+        background: rgba(108, 92, 231, 0.2);
+        color: var(--primary-color);
+    }
+
+    .notification-card .notif-type.comment {
+        background: rgba(0, 206, 201, 0.2);
+        color: var(--accent-color);
+    }
+
+    .notification-card .notif-type.like {
+        background: rgba(231, 76, 60, 0.2);
+        color: var(--danger-color);
+    }
+
+    .notification-card .notif-indicator {
+        width: 10px;
+        height: 10px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border-radius: var(--border-radius);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        opacity: 0.3;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 600px) {
+        .notification-card {
+            padding: 0.75rem 1rem;
+        }
+
+        .notification-card .notif-avatar {
+            width: 40px;
+            height: 40px;
+        }
+
+        .notification-card .notif-meta {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+    function handleNotifClick(notifId, type, publicationId, senderUsername) {
+        // Marquer comme lu
+        fetch(`/api/notifications/${notifId}/read`, { method: "POST" });
+
+        // Mettre à jour l'UI
+        const card = document.querySelector(
+            `.notification-card[data-id="${notifId}"]`,
+        );
+        if (card) {
+            card.classList.remove("unread");
+            const indicator = card.querySelector(".notif-indicator");
+            if (indicator) indicator.remove();
+        }
+
+        // Rediriger selon le type
+        if (type === "message" && senderUsername) {
+            window.location.href = `/chat/${senderUsername}`;
+        } else if ((type === "comment" || type === "like") && publicationId) {
+            window.location.href = `/watch/${publicationId}`;
+        }
+    }
+
+    function markAllRead() {
+        fetch("/api/notifications/read-all", { method: "POST" })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    // Mettre à jour l'UI
+                    document
+                        .querySelectorAll(".notification-card.unread")
+                        .forEach((card) => {
+                            card.classList.remove("unread");
+                            const indicator =
+                                card.querySelector(".notif-indicator");
+                            if (indicator) indicator.remove();
+                        });
+
+                    // Mettre à jour le badge dans le header
+                    const badge = document.getElementById("notifBadge");
+                    if (badge) badge.style.display = "none";
+                }
+            });
+    }
+</script>
+{% endblock %}

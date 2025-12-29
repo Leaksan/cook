@@ -1,0 +1,373 @@
+{% extends "base.html" %} {% block title %}Publier une vidéo - The Sauce{%
+endblock %} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-cloud-upload-alt"></i>
+        Publier une vidéo
+    </h1>
+    <a href="{{ url_for('publications') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i>
+        Retour aux publications
+    </a>
+</div>
+
+<div class="form-container" style="max-width: 700px">
+    <div class="card">
+        <form
+            method="POST"
+            action="{{ url_for('upload') }}"
+            enctype="multipart/form-data"
+            id="uploadForm"
+        >
+            <!-- Video Upload Area -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-video"></i> Fichier vidéo
+                </label>
+                <div
+                    class="file-upload"
+                    id="dropZone"
+                    onclick="document.getElementById('videoInput').click()"
+                >
+                    <div id="dropZoneContent">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Glissez-déposez votre vidéo ici</h3>
+                        <p class="text-muted">
+                            ou cliquez pour sélectionner un fichier
+                        </p>
+                        <p class="text-muted" style="font-size: 0.8rem">
+                            Formats acceptés: MP4, AVI, MOV, MKV, WebM (max
+                            100MB)
+                        </p>
+                    </div>
+                </div>
+                <!-- Input file en dehors du dropZone pour ne pas être écrasé -->
+                <input
+                    type="file"
+                    id="videoInput"
+                    name="video"
+                    accept=".mp4,.avi,.mov,.mkv,.webm,video/*"
+                    required
+                    onchange="handleFileSelect(this)"
+                    style="display: none"
+                />
+                <!-- Selected file info -->
+                <div id="fileInfo" class="hidden mt-2">
+                    <div class="alert alert-info">
+                        <i class="fas fa-file-video"></i>
+                        <span id="fileName"></span>
+                        <span class="text-muted" id="fileSize"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Preview -->
+            <div class="form-group hidden" id="previewContainer">
+                <label class="form-label">
+                    <i class="fas fa-eye"></i> Aperçu
+                </label>
+                <div
+                    class="video-player"
+                    style="aspect-ratio: 16/9; max-height: 300px"
+                >
+                    <video
+                        id="videoPreview"
+                        controls
+                        style="width: 100%; height: 100%"
+                    >
+                        Votre navigateur ne supporte pas la lecture vidéo.
+                    </video>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <div class="form-group">
+                <label class="form-label" for="title">
+                    <i class="fas fa-heading"></i> Titre de la vidéo
+                </label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="title"
+                    name="title"
+                    placeholder="Donnez un titre accrocheur à votre vidéo"
+                    required
+                    minlength="3"
+                    maxlength="100"
+                />
+                <p class="form-text">Entre 3 et 100 caractères</p>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label class="form-label" for="description">
+                    <i class="fas fa-align-left"></i> Description
+                </label>
+                <textarea
+                    class="form-control"
+                    id="description"
+                    name="description"
+                    rows="4"
+                    placeholder="Décrivez votre vidéo (optionnel)"
+                    maxlength="500"
+                ></textarea>
+                <p class="form-text">
+                    <span id="charCount">0</span>/500 caractères
+                </p>
+            </div>
+
+            <!-- Catégorie -->
+            <div class="form-group">
+                <label class="form-label" for="category_id">
+                    <i class="fas fa-folder"></i> Catégorie
+                </label>
+                <select
+                    class="form-control"
+                    id="category_id"
+                    name="category_id"
+                    required
+                >
+                    <option value="">-- Choisir une catégorie --</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-group">
+                <button
+                    type="submit"
+                    class="btn btn-primary btn-lg btn-block"
+                    id="submitBtn"
+                >
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Publier la vidéo
+                </button>
+                <p class="form-text text-center mt-2">
+                    <i class="fas fa-info-circle"></i>
+                    Votre vidéo sera soumise à validation avant d'être publiée
+                </p>
+            </div>
+        </form>
+
+        <!-- Upload Progress -->
+        <div id="uploadProgress" class="hidden mt-3">
+            <div class="d-flex justify-between align-center mb-1">
+                <span>Envoi en cours...</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div
+                style="
+                    height: 8px;
+                    background: var(--bg-darker);
+                    border-radius: 4px;
+                    overflow: hidden;
+                "
+            >
+                <div
+                    id="progressBar"
+                    style="
+                        height: 100%;
+                        width: 0%;
+                        background: var(--gradient-primary);
+                        transition: width 0.3s;
+                    "
+                ></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Guidelines -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-lightbulb"></i>
+                Conseils pour une bonne publication
+            </h3>
+        </div>
+        <ul style="list-style: none; padding: 0">
+            <li class="d-flex gap-1 align-center mb-2">
+                <i
+                    class="fas fa-check-circle"
+                    style="color: var(--success-color)"
+                ></i>
+                <span>Choisissez un titre clair et descriptif</span>
+            </li>
+            <li class="d-flex gap-1 align-center mb-2">
+                <i
+                    class="fas fa-check-circle"
+                    style="color: var(--success-color)"
+                ></i>
+                <span>Ajoutez une description détaillée</span>
+            </li>
+            <li class="d-flex gap-1 align-center mb-2">
+                <i
+                    class="fas fa-check-circle"
+                    style="color: var(--success-color)"
+                ></i>
+                <span>Vérifiez la qualité de votre vidéo avant l'envoi</span>
+            </li>
+            <li class="d-flex gap-1 align-center mb-2">
+                <i
+                    class="fas fa-check-circle"
+                    style="color: var(--success-color)"
+                ></i>
+                <span>Respectez les règles de la communauté</span>
+            </li>
+            <li class="d-flex gap-1 align-center">
+                <i
+                    class="fas fa-exclamation-triangle"
+                    style="color: var(--warning-color)"
+                ></i>
+                <span>Pas de contenu inapproprié ou illégal</span>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    const dropZone = document.getElementById("dropZone");
+    const videoInput = document.getElementById("videoInput");
+    const fileInfo = document.getElementById("fileInfo");
+    const previewContainer = document.getElementById("previewContainer");
+    const videoPreview = document.getElementById("videoPreview");
+    const description = document.getElementById("description");
+    const charCount = document.getElementById("charCount");
+    const uploadForm = document.getElementById("uploadForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const uploadProgress = document.getElementById("uploadProgress");
+    const progressBar = document.getElementById("progressBar");
+    const progressPercent = document.getElementById("progressPercent");
+
+    // Character counter for description
+    description.addEventListener("input", function () {
+        charCount.textContent = this.value.length;
+    });
+
+    // Drag and drop handling
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropZone.style.borderColor = "var(--secondary-color)";
+        dropZone.style.background = "rgba(0, 206, 201, 0.1)";
+    }
+
+    function unhighlight() {
+        dropZone.style.borderColor = "";
+        dropZone.style.background = "";
+    }
+
+    dropZone.addEventListener("drop", function (e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            videoInput.files = files;
+            handleFileSelect(videoInput);
+        }
+    });
+
+    // File selection handling
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = [
+            "video/mp4",
+            "video/avi",
+            "video/mov",
+            "video/quicktime",
+            "video/x-matroska",
+            "video/webm",
+        ];
+        const extension = file.name.split(".").pop().toLowerCase();
+        const validExtensions = ["mp4", "avi", "mov", "mkv", "webm"];
+
+        if (!validExtensions.includes(extension)) {
+            alert(
+                "Format de fichier non autorisé. Veuillez choisir un fichier MP4, AVI, MOV, MKV ou WebM.",
+            );
+            input.value = "";
+            return;
+        }
+
+        // Validate file size (100MB max)
+        const maxSize = 100 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert("Le fichier est trop volumineux. Taille maximale: 100MB.");
+            input.value = "";
+            return;
+        }
+
+        // Show file info
+        document.getElementById("fileName").textContent = file.name;
+        document.getElementById("fileSize").textContent =
+            " (" + formatFileSize(file.size) + ")";
+        fileInfo.classList.remove("hidden");
+
+        // Update drop zone appearance (seulement le contenu, pas l'input)
+        document.getElementById("dropZoneContent").innerHTML = `
+            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+            <h3>${file.name}</h3>
+            <p class="text-muted">${formatFileSize(file.size)}</p>
+            <p class="text-muted" style="font-size: 0.8rem;">Cliquez pour changer de fichier</p>
+        `;
+
+        // Show video preview
+        const url = URL.createObjectURL(file);
+        videoPreview.src = url;
+        previewContainer.classList.remove("hidden");
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    }
+
+    // Form submission with progress
+    uploadForm.addEventListener("submit", function (e) {
+        if (!videoInput.files[0]) {
+            e.preventDefault();
+            alert("Veuillez sélectionner une vidéo.");
+            return;
+        }
+
+        // Show progress bar
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
+        uploadProgress.classList.remove("hidden");
+
+        // Note: For actual progress tracking, you'd need to use XMLHttpRequest or fetch with progress events
+        // This is a simulation for visual feedback
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress > 90) {
+                clearInterval(interval);
+                progress = 90;
+            }
+            progressBar.style.width = progress + "%";
+            progressPercent.textContent = Math.round(progress) + "%";
+        }, 200);
+    });
+</script>
+{% endblock %}

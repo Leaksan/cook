@@ -1,0 +1,473 @@
+{% extends "base.html" %} {% block title %}Chat avec {{ other_user.fullname }} -
+The Sauce{% endblock %} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-comments"></i>
+        Chat avec {{ other_user.fullname }}
+    </h1>
+    <a href="{{ url_for('rencontres') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i>
+        Retour
+    </a>
+</div>
+
+<div class="chat-wrapper" style="max-width: 900px; margin: 0 auto">
+    <!-- Chat Panel -->
+    <div class="chat-panel" style="height: calc(100vh - 200px)">
+        <div class="chat-header">
+            {% if other_user.avatar %}
+            <img
+                src="{{ url_for('static', filename='avatars/' + other_user.avatar) }}"
+                alt="{{ other_user.fullname }}"
+                style="width: 48px; height: 48px; border-radius: 50%"
+            />
+            {% else %}
+            <div
+                class="user-avatar-placeholder"
+                style="width: 48px; height: 48px; font-size: 1.2rem"
+            >
+                <i class="fas fa-user"></i>
+            </div>
+            {% endif %}
+            <div>
+                <h4>{{ other_user.fullname }}</h4>
+                <p class="text-muted" style="font-size: 0.8rem">
+                    <span id="onlineStatus">
+                        <i
+                            class="fas fa-circle"
+                            style="color: var(--text-muted)"
+                        ></i>
+                        Hors ligne
+                    </span>
+                </p>
+            </div>
+            <a
+                href="{{ url_for('view_user', username=other_user.username) }}"
+                class="btn btn-outline btn-sm"
+                style="margin-left: auto"
+            >
+                <i class="fas fa-user"></i>
+                Profil
+            </a>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            {% if messages or pending_ephemeral_photos %} {% for msg in messages
+            %}
+            <div
+                class="message {% if msg.sender.username == session.get('username') %}sent{% else %}received{% endif %}"
+            >
+                <div>{{ msg.content }}</div>
+                <div class="message-time">
+                    {{ msg.created_at.strftime('%H:%M') }}
+                </div>
+            </div>
+            {% endfor %} {% for photo in pending_ephemeral_photos %}
+            <div class="message received">
+                <div
+                    class="ephemeral-photo-msg"
+                    onclick="viewEphemeralPhoto('{{ url_for('static', filename='ephemeral/' + photo.filename) }}', '{{ photo.filename }}', {{ photo.id }}, this)"
+                    data-ephemeral-id="{{ photo.id }}"
+                >
+                    <i class="fas fa-fire"></i>
+                    <div><i class="fas fa-image"></i> Photo éphémère</div>
+                    <small>Cliquez pour voir</small>
+                </div>
+                <div class="message-time">
+                    {{ photo.created_at.strftime('%H:%M') }}
+                </div>
+            </div>
+            {% endfor %} {% else %}
+            <div
+                class="text-center text-muted"
+                style="padding: 2rem"
+                id="emptyState"
+            >
+                <i
+                    class="fas fa-comments"
+                    style="font-size: 3rem; opacity: 0.3"
+                ></i>
+                <p class="mt-2">Commencez la conversation !</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="chat-input">
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Tapez votre message..."
+                onkeypress="handleKeyPress(event)"
+                autocomplete="off"
+            />
+            <!-- Bouton photo éphémère -->
+            <button
+                type="button"
+                class="btn-ephemeral"
+                onclick="document.getElementById('ephemeralInput').click()"
+                title="Envoyer une photo éphémère"
+                style="
+                    background: var(--accent-color);
+                    border: none;
+                    border-radius: var(--border-radius);
+                    padding: 0.75rem;
+                    cursor: pointer;
+                    color: white;
+                "
+            >
+                <i class="fas fa-camera"></i>
+            </button>
+            <input
+                type="file"
+                id="ephemeralInput"
+                accept="image/*"
+                style="display: none"
+                onchange="sendEphemeralPhoto(this)"
+            />
+            <button onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour afficher les photos éphémères -->
+<div class="modal-overlay" id="ephemeralModal" onclick="closeEphemeralModal()">
+    <div
+        class="modal"
+        style="
+            max-width: 90%;
+            max-height: 90%;
+            padding: 0;
+            background: transparent;
+        "
+        onclick="event.stopPropagation()"
+    >
+        <div style="position: relative">
+            <img
+                id="ephemeralImage"
+                src=""
+                style="
+                    max-width: 100%;
+                    max-height: 80vh;
+                    border-radius: var(--border-radius);
+                "
+            />
+            <div style="position: absolute; top: 10px; right: 10px">
+                <button
+                    class="btn btn-danger btn-sm"
+                    onclick="closeEphemeralModal()"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div
+                style="
+                    position: absolute;
+                    bottom: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.7);
+                    padding: 0.5rem 1rem;
+                    border-radius: 20px;
+                "
+            >
+                <i class="fas fa-fire"></i>
+                <span id="ephemeralTimer">Photo éphémère</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ephemeral-photo-msg {
+        background: linear-gradient(
+            135deg,
+            var(--accent-color),
+            var(--primary-color)
+        );
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    .ephemeral-photo-msg:hover {
+        transform: scale(1.05);
+    }
+    .ephemeral-photo-msg i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .ephemeral-photo-msg.viewed {
+        opacity: 0.5;
+        background: var(--bg-darker);
+    }
+</style>
+
+{% endblock %} {% block scripts %}
+<script>
+    const roomId = "{{ room_id }}";
+    const conversationId = {{ conversation_id }};
+    const otherUserId = {{ other_user.id }};
+    const otherUsername = "{{ other_user.username }}";
+    const myUsername = '{{ session.get("username") }}';
+    const myFullname = '{{ session.get("fullname") }}';
+
+    // Join the chat room
+    socket.emit("join_room", { room: roomId });
+
+    // Scroll to bottom on load
+    const chatMessages = document.getElementById("chatMessages");
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Check if user is online
+    socket.on("user_joined", function (data) {
+        if (data.username === otherUsername) {
+            updateOnlineIndicator(true);
+        }
+    });
+
+    socket.on("user_left", function (data) {
+        if (data.username === otherUsername) {
+            updateOnlineIndicator(false);
+        }
+    });
+
+    socket.on("user_online", function (data) {
+        if (data.username === otherUsername) {
+            updateOnlineIndicator(true);
+        }
+    });
+
+    socket.on("user_offline", function (data) {
+        if (data.username === otherUsername) {
+            updateOnlineIndicator(false);
+        }
+    });
+
+    function updateOnlineIndicator(isOnline) {
+        const statusEl = document.getElementById("onlineStatus");
+        if (isOnline) {
+            statusEl.innerHTML =
+                '<i class="fas fa-circle" style="color: var(--success-color);"></i> En ligne';
+        } else {
+            statusEl.innerHTML =
+                '<i class="fas fa-circle" style="color: var(--text-muted);"></i> Hors ligne';
+        }
+    }
+
+    // ============== Chat Messages ==============
+
+    socket.on("new_message", function (data) {
+        addMessage(
+            data.username,
+            data.fullname,
+            data.message,
+            data.timestamp,
+            data.username === myUsername,
+        );
+    });
+
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value.trim();
+
+        if (message) {
+            socket.emit("chat_message", {
+                room: roomId,
+                message: message,
+                conversation_id: conversationId,
+                receiver_id: otherUserId,
+            });
+            input.value = "";
+        }
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    }
+
+    function addMessage(username, fullname, message, timestamp, isMine) {
+        const messagesContainer = document.getElementById("chatMessages");
+
+        // Remove empty state if exists
+        const emptyState = document.getElementById("emptyState");
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const messageEl = document.createElement("div");
+        messageEl.className = `message ${isMine ? "sent" : "received"}`;
+        messageEl.innerHTML = `
+            <div>${escapeHtml(message)}</div>
+            <div class="message-time">${timestamp}</div>
+        `;
+
+        messagesContainer.appendChild(messageEl);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ============== Photos Éphémères ==============
+
+    async function sendEphemeralPhoto(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Vérifier le type de fichier
+        if (!file.type.startsWith("image/")) {
+            alert("Veuillez sélectionner une image.");
+            return;
+        }
+
+        // Vérifier la taille (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert("L'image est trop volumineuse (max 5MB).");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("photo", file);
+        formData.append("conversation_id", conversationId);
+        formData.append("receiver_id", otherUserId);
+
+        try {
+            const response = await fetch("/upload_ephemeral", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Envoyer via socket
+                socket.emit("ephemeral_photo", {
+                    room: roomId,
+                    photo_url: data.url,
+                    filename: data.filename,
+                    ephemeral_id: data.ephemeral_id,
+                });
+            } else {
+                alert("Erreur: " + (data.error || "Upload échoué"));
+            }
+        } catch (error) {
+            console.error("Erreur upload:", error);
+            alert("Erreur lors de l'envoi de la photo.");
+        }
+
+        // Reset input
+        input.value = "";
+    }
+
+    // Recevoir une photo éphémère
+    socket.on("ephemeral_photo", function (data) {
+        addEphemeralPhotoMessage(
+            data.username,
+            data.fullname,
+            data.photo_url,
+            data.filename,
+            data.ephemeral_id,
+            data.timestamp,
+            data.username === myUsername,
+        );
+    });
+
+    function addEphemeralPhotoMessage(
+        username,
+        fullname,
+        photoUrl,
+        filename,
+        ephemeralId,
+        timestamp,
+        isMine,
+    ) {
+        const messagesContainer = document.getElementById("chatMessages");
+
+        // Remove empty state if exists
+        const emptyState = document.getElementById("emptyState");
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const messageEl = document.createElement("div");
+        messageEl.className = `message ${isMine ? "sent" : "received"}`;
+        messageEl.innerHTML = `
+            <div class="ephemeral-photo-msg" onclick="viewEphemeralPhoto('${photoUrl}', '${filename}', ${ephemeralId}, this)">
+                <i class="fas fa-fire"></i>
+                <div><i class="fas fa-image"></i> Photo éphémère</div>
+                <small>Cliquez pour voir</small>
+            </div>
+            <div class="message-time">${timestamp}</div>
+        `;
+
+        messagesContainer.appendChild(messageEl);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    let currentEphemeralFilename = null;
+    let currentEphemeralId = null;
+    let ephemeralTimer = null;
+
+    function viewEphemeralPhoto(url, filename, ephemeralId, element) {
+        // Marquer comme vu
+        element.classList.add("viewed");
+        element.innerHTML =
+            '<i class="fas fa-fire-alt"></i><div>Photo vue</div>';
+        element.onclick = null;
+
+        // Afficher le modal
+        document.getElementById("ephemeralImage").src = url;
+        document.getElementById("ephemeralModal").classList.add("active");
+        currentEphemeralFilename = filename;
+        currentEphemeralId = ephemeralId;
+
+        // Timer de 5 secondes
+        let countdown = 5;
+        document.getElementById("ephemeralTimer").textContent =
+            `Disparaît dans ${countdown}s`;
+
+        ephemeralTimer = setInterval(() => {
+            countdown--;
+            document.getElementById("ephemeralTimer").textContent =
+                `Disparaît dans ${countdown}s`;
+
+            if (countdown <= 0) {
+                closeEphemeralModal();
+            }
+        }, 1000);
+    }
+
+    function closeEphemeralModal() {
+        document.getElementById("ephemeralModal").classList.remove("active");
+        document.getElementById("ephemeralImage").src = "";
+
+        if (ephemeralTimer) {
+            clearInterval(ephemeralTimer);
+            ephemeralTimer = null;
+        }
+
+        // Notifier le serveur que la photo a été vue
+        if (currentEphemeralFilename || currentEphemeralId) {
+            socket.emit("photo_viewed", {
+                filename: currentEphemeralFilename,
+                ephemeral_id: currentEphemeralId
+            });
+            currentEphemeralFilename = null;
+            currentEphemeralId = null;
+        }
+    }
+
+    // Cleanup on page unload
+    window.addEventListener("beforeunload", function () {
+        socket.emit("leave_room", { room: roomId });
+    });
+</script>
+{% endblock %}

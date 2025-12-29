@@ -1,0 +1,436 @@
+{% extends "base.html" %} {% block title %}Mon Profil - StreamBox{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-user-circle"></i>
+        Mon Profil
+    </h1>
+</div>
+
+<!-- Profile Header -->
+<div class="profile-header">
+    <div>
+        {% if user.avatar %}
+        <img
+            src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+            alt="{{ user.fullname }}"
+            class="profile-avatar"
+        />
+        {% else %}
+        <div class="profile-avatar-placeholder">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+    </div>
+    <div class="profile-info" style="flex: 1">
+        <h1>{{ user.fullname }}</h1>
+        <p class="username text-muted">@{{ session.get('username') }}</p>
+        <p class="text-muted">
+            <i class="fas fa-envelope"></i> {{ user.email }}
+        </p>
+        {% if user.bio %}
+        <p class="mt-2">{{ user.bio }}</p>
+        {% endif %}
+        <div class="profile-stats mt-3">
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ publications|length }}</div>
+                <div class="profile-stat-label">Publications</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">
+                    {{ publications|sum(attribute='views') }}
+                </div>
+                <div class="profile-stat-label">Vues totales</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">
+                    {{ publications|sum(attribute='likes') }}
+                </div>
+                <div class="profile-stat-label">J'aime</div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2" style="flex-direction: column">
+        <button class="btn btn-primary" onclick="openEditModal()">
+            <i class="fas fa-edit"></i>
+            Modifier le profil
+        </button>
+        {% if session.get('role') == 'admin' %}
+        <a href="{{ url_for('telegram_setup') }}" class="btn btn-accent">
+            <i class="fab fa-telegram"></i>
+            Configurer Telegram
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <div
+        class="tab active"
+        data-tab="publications"
+        onclick="switchTab('publications')"
+    >
+        <i class="fas fa-video"></i> Mes Publications
+    </div>
+    <div class="tab" data-tab="settings" onclick="switchTab('settings')">
+        <i class="fas fa-cog"></i> Paramètres
+    </div>
+</div>
+
+<!-- Publications Tab -->
+<div id="publications-tab" class="tab-content">
+    {% if publications %}
+    <div class="videos-grid">
+        {% for pub in publications %}
+        <div class="video-card">
+            <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                <div class="video-thumbnail">
+                    <video preload="metadata" muted>
+                        <source
+                            src="{{ url_for('static', filename='uploads/' + pub.filename) }}#t=0.5"
+                            type="video/mp4"
+                        />
+                    </video>
+                    <div class="video-play-overlay">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                </div>
+            </a>
+            <div class="video-info">
+                <div class="d-flex justify-between align-center">
+                    <a href="{{ url_for('watch', pub_id=pub.id) }}">
+                        <h3 class="video-title">{{ pub.title }}</h3>
+                    </a>
+                    <span
+                        class="badge {% if pub.status == 'approved' %}badge-success{% elif pub.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}"
+                    >
+                        {% if pub.status == 'approved' %}
+                        <i class="fas fa-check"></i> Approuvé {% elif pub.status
+                        == 'pending' %} <i class="fas fa-hourglass-half"></i> En
+                        attente {% else %} <i class="fas fa-times"></i> Rejeté
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="video-meta mt-2">
+                    <div class="video-stats">
+                        <span><i class="fas fa-eye"></i> {{ pub.views }}</span>
+                        <span
+                            ><i class="fas fa-heart"></i> {{ pub.likes }}</span
+                        >
+                    </div>
+                </div>
+                <p class="text-muted mt-1" style="font-size: 0.75rem">
+                    <i class="fas fa-calendar"></i>
+                    {{ pub.created_at.strftime('%d/%m/%Y') }}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-film"></i>
+        <h3>Aucune publication</h3>
+        <p class="text-muted">Vous n'avez pas encore publié de vidéo.</p>
+        <a href="{{ url_for('upload') }}" class="btn btn-primary mt-2">
+            <i class="fas fa-cloud-upload-alt"></i>
+            Publier ma première vidéo
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Settings Tab -->
+<div id="settings-tab" class="tab-content hidden">
+    <div class="card" style="max-width: 600px">
+        <h3 class="mb-3">
+            <i class="fas fa-user-edit"></i> Modifier mes informations
+        </h3>
+
+        <form
+            method="POST"
+            action="{{ url_for('edit_profile') }}"
+            enctype="multipart/form-data"
+        >
+            <!-- Avatar -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-camera"></i> Photo de profil
+                </label>
+                <div class="d-flex gap-2 align-center">
+                    {% if user.avatar %}
+                    <img
+                        src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+                        alt="{{ user.fullname }}"
+                        class="user-avatar"
+                        style="width: 80px; height: 80px"
+                    />
+                    {% else %}
+                    <div
+                        class="user-avatar-placeholder"
+                        style="width: 80px; height: 80px; font-size: 2rem"
+                    >
+                        <i class="fas fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <input
+                            type="file"
+                            name="avatar"
+                            id="avatarInput"
+                            accept="image/*"
+                            class="hidden"
+                            onchange="previewAvatar(this)"
+                        />
+                        <button
+                            type="button"
+                            class="btn btn-outline btn-sm"
+                            onclick="
+                                document.getElementById('avatarInput').click()
+                            "
+                        >
+                            <i class="fas fa-upload"></i> Changer la photo
+                        </button>
+                        <p class="form-text">JPG, PNG ou GIF. Max 5MB.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full Name -->
+            <div class="form-group">
+                <label class="form-label" for="fullname">
+                    <i class="fas fa-id-card"></i> Nom complet
+                </label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="fullname"
+                    name="fullname"
+                    value="{{ user.fullname }}"
+                    required
+                />
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label class="form-label" for="email">
+                    <i class="fas fa-envelope"></i> Adresse email
+                </label>
+                <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    value="{{ user.email }}"
+                    required
+                />
+            </div>
+
+            <!-- Bio -->
+            <div class="form-group">
+                <label class="form-label" for="bio">
+                    <i class="fas fa-pen"></i> Bio
+                </label>
+                <textarea
+                    class="form-control"
+                    id="bio"
+                    name="bio"
+                    rows="3"
+                    placeholder="Parlez de vous..."
+                    maxlength="200"
+                >
+{{ user.bio or '' }}</textarea
+                >
+                <p class="form-text">Maximum 200 caractères</p>
+            </div>
+
+            <!-- New Password -->
+            <div class="form-group">
+                <label class="form-label" for="new_password">
+                    <i class="fas fa-lock"></i> Nouveau mot de passe
+                </label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="new_password"
+                    name="new_password"
+                    placeholder="Laisser vide pour ne pas changer"
+                />
+                <p class="form-text">
+                    Laisser vide si vous ne souhaitez pas changer votre mot de
+                    passe
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                Enregistrer les modifications
+            </button>
+        </form>
+    </div>
+
+    <!-- Danger Zone -->
+    <div
+        class="card mt-4"
+        style="max-width: 600px; border: 1px solid var(--danger-color)"
+    >
+        <h3 class="mb-3" style="color: var(--danger-color)">
+            <i class="fas fa-exclamation-triangle"></i> Zone de danger
+        </h3>
+        <p class="text-muted mb-3">
+            Ces actions sont irréversibles. Procédez avec prudence.
+        </p>
+        <button class="btn btn-danger" onclick="confirmLogoutAll()">
+            <i class="fas fa-sign-out-alt"></i>
+            Se déconnecter de tous les appareils
+        </button>
+    </div>
+</div>
+
+<!-- Edit Modal (Quick Edit) -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Modifier le profil</h3>
+            <button class="modal-close" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form
+            method="POST"
+            action="{{ url_for('edit_profile') }}"
+            enctype="multipart/form-data"
+        >
+            <div class="form-group">
+                <label class="form-label">Nom complet</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    name="fullname"
+                    value="{{ user.fullname }}"
+                    required
+                />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Bio</label>
+                <textarea
+                    class="form-control"
+                    name="bio"
+                    rows="3"
+                    placeholder="Parlez de vous..."
+                >
+{{ user.bio or '' }}</textarea
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input
+                    type="email"
+                    class="form-control"
+                    name="email"
+                    value="{{ user.email }}"
+                    required
+                />
+            </div>
+            <div class="d-flex gap-1 justify-between">
+                <button
+                    type="button"
+                    class="btn btn-outline"
+                    onclick="closeEditModal()"
+                >
+                    Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    function switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll(".tab").forEach((tab) => {
+            if (tab.dataset.tab === tabName) {
+                tab.classList.add("active");
+            } else {
+                tab.classList.remove("active");
+            }
+        });
+
+        // Update tab content
+        document.querySelectorAll(".tab-content").forEach((content) => {
+            content.classList.add("hidden");
+        });
+        document.getElementById(tabName + "-tab").classList.remove("hidden");
+    }
+
+    function openEditModal() {
+        document.getElementById("editModal").classList.add("active");
+    }
+
+    function closeEditModal() {
+        document.getElementById("editModal").classList.remove("active");
+    }
+
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const preview = input.parentElement.parentElement.querySelector(
+                    "img, .user-avatar-placeholder",
+                );
+                if (preview.tagName === "IMG") {
+                    preview.src = e.target.result;
+                } else {
+                    const newImg = document.createElement("img");
+                    newImg.src = e.target.result;
+                    newImg.className = "user-avatar";
+                    newImg.style.width = "80px";
+                    newImg.style.height = "80px";
+                    preview.parentElement.replaceChild(newImg, preview);
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function confirmLogoutAll() {
+        if (
+            confirm(
+                "Êtes-vous sûr de vouloir vous déconnecter de tous les appareils ?",
+            )
+        ) {
+            window.location.href = '{{ url_for("logout") }}';
+        }
+    }
+
+    // Close modal on outside click
+    document
+        .getElementById("editModal")
+        .addEventListener("click", function (e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+    // Video thumbnail hover effect
+    document.querySelectorAll(".video-card").forEach((card) => {
+        const video = card.querySelector("video");
+        if (video) {
+            video.addEventListener("loadedmetadata", function () {
+                this.currentTime = 0.5;
+            });
+            card.addEventListener("mouseenter", () => {
+                video.play().catch(() => {});
+            });
+            card.addEventListener("mouseleave", () => {
+                video.pause();
+                video.currentTime = 0.5;
+            });
+        }
+    });
+</script>
+{% endblock %}

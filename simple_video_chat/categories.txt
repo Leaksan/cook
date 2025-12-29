@@ -1,0 +1,8 @@
+# Catégories de vidéos
+Divertissement
+Gaming
+Musique
+Sport
+Tutoriel
+Vlog
+Autre

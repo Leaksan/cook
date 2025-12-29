@@ -1,0 +1,132 @@
+{% extends "base.html" %} {% block title %}Inscription - The Sauce{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="text-center mb-4">
+            <div
+                class="feature-icon"
+                style="margin: 0 auto 1rem; background: var(--gradient-accent)"
+            >
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <h1>Créer un compte</h1>
+            <p class="text-muted">Rejoignez la communauté The Sauce</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label class="form-label" for="username">
+                    <i class="fas fa-user"></i> Nom d'utilisateur
+                </label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    name="username"
+                    placeholder="Choisissez un nom d'utilisateur"
+                    required
+                    minlength="3"
+                    maxlength="20"
+                    pattern="[a-zA-Z0-9_]+"
+                    title="Lettres, chiffres et underscores uniquement"
+                />
+                <p class="form-text">
+                    Lettres, chiffres et underscores uniquement (3-20
+                    caractères)
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="fullname">
+                    <i class="fas fa-id-card"></i> Nom complet
+                </label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="fullname"
+                    name="fullname"
+                    placeholder="Votre nom complet"
+                    required
+                    minlength="2"
+                    maxlength="50"
+                />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">
+                    <i class="fas fa-envelope"></i> Adresse email
+                </label>
+                <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    placeholder="votre@email.com"
+                    required
+                />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">
+                    <i class="fas fa-lock"></i> Mot de passe
+                </label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    name="password"
+                    placeholder="Choisissez un mot de passe sécurisé"
+                    required
+                    minlength="6"
+                />
+                <p class="form-text">Minimum 6 caractères</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">
+                    <i class="fas fa-lock"></i> Confirmer le mot de passe
+                </label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="confirm_password"
+                    name="confirm_password"
+                    placeholder="Confirmez votre mot de passe"
+                    required
+                />
+            </div>
+
+            <button type="submit" class="btn btn-accent btn-lg btn-block">
+                <i class="fas fa-user-plus"></i>
+                Créer mon compte
+            </button>
+        </form>
+
+        <div class="text-center mt-3">
+            <p class="text-muted">
+                Vous avez déjà un compte ?
+                <a href="{{ url_for('login') }}">Se connecter</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    // Password confirmation validation
+    const password = document.getElementById("password");
+    const confirmPassword = document.getElementById("confirm_password");
+
+    function validatePassword() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity(
+                "Les mots de passe ne correspondent pas",
+            );
+        } else {
+            confirmPassword.setCustomValidity("");
+        }
+    }
+
+    password.addEventListener("change", validatePassword);
+    confirmPassword.addEventListener("keyup", validatePassword);
+</script>
+{% endblock %}

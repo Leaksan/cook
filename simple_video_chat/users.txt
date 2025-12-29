@@ -1,0 +1,3 @@
+admin:admin123:admin:Admin User:admin@streambox.com:true
+user1:password1:user:Jean Dupont:jean@email.com:true
+user2:password2:user:Marie Martin:marie@email.com:true

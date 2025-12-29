@@ -1,0 +1,192 @@
+{% extends "base.html" %} {% block title %}Administration - The Sauce{% endblock
+%} {% block content %}
+<div class="page-header">
+    <h1>
+        <i class="fas fa-cog"></i>
+        Administration
+    </h1>
+</div>
+
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <nav>
+            <ul class="admin-nav">
+                <li>
+                    <a
+                        href="{{ url_for('admin') }}"
+                        class="admin-nav-link active"
+                    >
+                        <i class="fas fa-tachometer-alt"></i>
+                        Tableau de bord
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_users') }}"
+                        class="admin-nav-link"
+                    >
+                        <i class="fas fa-users"></i>
+                        Utilisateurs
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_publications') }}"
+                        class="admin-nav-link"
+                    >
+                        <i class="fas fa-video"></i>
+                        Publications
+                    </a>
+                </li>
+                <li>
+                    <a
+                        href="{{ url_for('admin_categories') }}"
+                        class="admin-nav-link"
+                    >
+                        <i class="fas fa-folder"></i>
+                        Catégories
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('index') }}" class="admin-nav-link">
+                        <i class="fas fa-home"></i>
+                        Retour au site
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <h2 class="mb-4">Tableau de bord</h2>
+
+        <!-- Stats Cards -->
+        <div class="admin-stats">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ stats.total_users }}</div>
+                    <div class="stat-label">Utilisateurs</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="fas fa-circle"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ stats.online_users }}</div>
+                    <div class="stat-label">En ligne</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon accent">
+                    <i class="fas fa-video"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ stats.total_publications }}</div>
+                    <div class="stat-label">Publications</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div>
+                    <div class="stat-value">
+                        {{ stats.pending_publications }}
+                    </div>
+                    <div class="stat-label">En attente</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bolt"></i>
+                    Actions rapides
+                </h3>
+            </div>
+            <div class="d-flex gap-2" style="flex-wrap: wrap">
+                <a href="{{ url_for('admin_users') }}" class="btn btn-primary">
+                    <i class="fas fa-user-cog"></i>
+                    Gérer les utilisateurs
+                </a>
+                <a
+                    href="{{ url_for('admin_publications') }}"
+                    class="btn btn-accent"
+                >
+                    <i class="fas fa-video"></i>
+                    Modérer les publications
+                </a>
+                {% if stats.pending_publications > 0 %}
+                <a
+                    href="{{ url_for('admin_publications') }}"
+                    class="btn btn-warning"
+                >
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ stats.pending_publications }} publication(s) à valider
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle"></i>
+                    Informations système
+                </h3>
+            </div>
+            <div class="d-flex gap-2" style="flex-wrap: wrap">
+                <div class="badge badge-primary">
+                    <i class="fas fa-server"></i>
+                    Flask + Socket.IO
+                </div>
+                <div class="badge badge-success">
+                    <i class="fas fa-database"></i>
+                    Stockage fichier
+                </div>
+                <div class="badge badge-info">
+                    <i class="fas fa-comments"></i>
+                    Chat temps réel
+                </div>
+            </div>
+            <p class="text-muted mt-3">
+                <i class="fas fa-shield-alt"></i>
+                Vous êtes connecté en tant qu'administrateur :
+                <strong>{{ session.get('username') }}</strong>
+            </p>
+        </div>
+
+        <!-- Recent Activity Placeholder -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clock"></i>
+                    Activité récente
+                </h3>
+            </div>
+            <div class="text-center text-muted" style="padding: 2rem">
+                <i
+                    class="fas fa-chart-line"
+                    style="font-size: 2rem; opacity: 0.3"
+                ></i>
+                <p class="mt-2">
+                    Les statistiques détaillées seront disponibles
+                    prochainement.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

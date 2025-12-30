@@ -1,6 +1,6 @@
-Flask-SQLAlchemy>=3.0.0
+Flask-SQLAlchemy>=3.1.1
 Flask-SocketIO==5.3.6
-SQLAlchemy>=2.0.31
+SQLAlchemy>=2.0.42
 Werkzeug==2.3.7
 python-socketio==5.9.0
 python-engineio==4.8.0

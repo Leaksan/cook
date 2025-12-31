@@ -24,7 +24,7 @@ endblock %} {% block content %}
                 <span class="text-muted">•</span>
                 <span class="text-muted">
                     <i class="fas fa-calendar"></i> {{
-                    publication.created_at.strftime('%d/%m/%Y') }}
+                    publication.created_at.strftime('%d/%B/%Y') }}
                 </span>
                 {% if publication.status != 'approved' %}
                 <span class="badge badge-warning">

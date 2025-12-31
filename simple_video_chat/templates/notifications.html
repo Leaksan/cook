@@ -37,7 +37,7 @@
                 <div class="notif-meta">
                     <span class="notif-time">
                         <i class="fas fa-clock"></i>
-                        {{ notif.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                        {{ notif.created_at.strftime('%d/%B/%Y à %H:%M') }}
                     </span>
                     <span class="notif-type {{ notif.type }}">
                         {% if notif.type == 'message' %}

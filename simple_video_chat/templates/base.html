@@ -172,6 +172,7 @@
                         <span>Accueil</span>
                     </a>
                 </li>
+                {% if session.get('role') == 'admin' %}
                 <li>
                     <a
                         href="{{ url_for('publications') }}"
@@ -181,6 +182,7 @@
                         <span>Vidéos</span>
                     </a>
                 </li>
+                {% endif %}
                 {% if session.get('username') %}
                 <li>
                     <a

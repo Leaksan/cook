@@ -2,8 +2,8 @@
 endblock %} {% block content %}
 <div class="watch-container">
     <!-- Video Player -->
-    <div class="video-player">
-        <video controls autoplay>
+    <div class="video-player" id="videoPlayerContainer">
+        <video controls autoplay id="videoPlayer">
             <source
                 src="{{ url_for('static', filename='uploads/' + publication.filename) }}"
                 type="video/mp4"
@@ -302,6 +302,45 @@ endblock %} {% block content %}
         font-size: 2rem;
         opacity: 0.3;
         margin-bottom: 0.5rem;
+    }
+
+    /* ============== VIDEO ORIENTATION ============== */
+    .video-player {
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: var(--bg-darker);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .video-player video {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Mode plein écran portrait */
+    .video-player:fullscreen {
+        aspect-ratio: auto;
+    }
+
+    .video-player video:fullscreen {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* Support pour d'autres navigateurs */
+    .video-player:-webkit-full-screen {
+        aspect-ratio: auto;
+    }
+
+    .video-player:-moz-full-screen {
+        aspect-ratio: auto;
+    }
+
+    .video-player:-ms-fullscreen {
+        aspect-ratio: auto;
     }
 </style>
 {% endblock %} {% block scripts %}

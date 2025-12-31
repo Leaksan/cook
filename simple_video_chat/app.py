@@ -299,10 +299,16 @@ def rencontres():
         flash("Veuillez vous connecter.", "warning")
         return redirect(url_for("login"))
 
-    users = User.query.filter(User.id != current_user.id, User.is_active == True).all()
+    page = request.args.get("page", 1, type=int)
+    per_page = 12
+
+    query = User.query.filter(
+        User.id != current_user.id, User.is_active == True
+    )
+    paginated = db.paginate(query, page=page, per_page=per_page, error_out=False)
 
     users_list = []
-    for user in users:
+    for user in paginated.items:
         users_list.append(
             {
                 "id": user.id,
@@ -320,6 +326,7 @@ def rencontres():
     return render_template(
         "rencontres.html",
         users=users_list,
+        pagination=paginated,
         online_users=online_users,
     )
 
@@ -441,6 +448,8 @@ def publications():
     """Page des publications (vidéos)"""
     categories = Category.query.order_by(Category.order).all()
     category_filter = request.args.get("category", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
 
     query = Publication.query.filter_by(status="approved")
 
@@ -449,13 +458,15 @@ def publications():
         if category:
             query = query.filter_by(category_id=category.id)
 
-    pubs = query.order_by(Publication.created_at.desc()).all()
+    query = query.order_by(Publication.created_at.desc())
+    paginated = db.paginate(query, page=page, per_page=per_page, error_out=False)
 
     return render_template(
         "publications.html",
-        publications=pubs,
+        publications=paginated.items,
         categories=categories,
         current_category=category_filter,
+        pagination=paginated,
     )
 
 
@@ -770,13 +781,19 @@ def delete_comment(comment_id):
 def notifications():
     """Page des notifications"""
     user = get_current_user()
-    notifs = (
-        Notification.query.filter_by(user_id=user.id)
-        .order_by(Notification.created_at.desc())
-        .limit(50)
-        .all()
+    if not user:
+        flash("Veuillez vous connecter.", "warning")
+        return redirect(url_for("login"))
+    
+    page = request.args.get("page", 1, type=int)
+    per_page = 15
+    
+    query = Notification.query.filter_by(user_id=user.id).order_by(
+        Notification.created_at.desc()
     )
-    return render_template("notifications.html", notifications=notifs)
+    paginated = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    
+    return render_template("notifications.html", notifications=paginated.items, pagination=paginated)
 
 
 @app.route("/api/notifications")
@@ -809,6 +826,8 @@ def api_notifications():
 def api_notifications_count():
     """API - Obtenir le nombre de notifications non lues"""
     user = get_current_user()
+    if not user:
+        return jsonify({"count": 0}), 401
     count = Notification.get_unread_count(user.id)
     return jsonify({"count": count})
 
@@ -818,6 +837,9 @@ def api_notifications_count():
 def api_notification_read(notif_id):
     """API - Marquer une notification comme lue"""
     user = get_current_user()
+    if not user:
+        return jsonify({"success": False}), 401
+    
     notif = Notification.query.get(notif_id)
 
     if not notif or notif.user_id != user.id:

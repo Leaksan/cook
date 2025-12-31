@@ -210,6 +210,9 @@ def logout():
 def profile():
     """Page de profil de l'utilisateur connecté"""
     user = get_current_user()
+    if not user:
+        flash("Veuillez vous connecter.", "warning")
+        return redirect(url_for("login"))
     publications = Publication.query.filter_by(user_id=user.id).all()
 
     return render_template("profile.html", user=user, publications=publications)
@@ -220,6 +223,9 @@ def profile():
 def edit_profile():
     """Modifier le profil"""
     user = get_current_user()
+    if not user:
+        flash("Veuillez vous connecter.", "warning")
+        return redirect(url_for("login"))
 
     # Avatar
     if "avatar" in request.files:
@@ -287,6 +293,11 @@ def view_user(username):
 def rencontres():
     """Page des rencontres - liste des utilisateurs"""
     current_user = get_current_user()
+    
+    # Vérifier que l'utilisateur est bien connecté
+    if not current_user:
+        flash("Veuillez vous connecter.", "warning")
+        return redirect(url_for("login"))
 
     users = User.query.filter(User.id != current_user.id, User.is_active == True).all()
 
@@ -318,6 +329,12 @@ def rencontres():
 def chat(username):
     """Page de chat avec un utilisateur"""
     current_user = get_current_user()
+    
+    # Vérifier que l'utilisateur est bien connecté
+    if not current_user:
+        flash("Veuillez vous connecter.", "warning")
+        return redirect(url_for("login"))
+    
     other_user = User.query.filter_by(username=username).first()
 
     if not other_user:
@@ -494,6 +511,10 @@ def upload():
 
             # Créer la publication
             user = get_current_user()
+            if not user:
+                flash("Veuillez vous connecter.", "warning")
+                return redirect(url_for("login"))
+            
             publication = Publication(
                 title=title,
                 description=description,
@@ -578,6 +599,9 @@ def watch(pub_id):
 def like(pub_id):
     """Liker une publication"""
     user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Non authentifié"}), 401
+    
     publication = Publication.query.get(pub_id)
 
     if not publication:
@@ -630,6 +654,9 @@ def like(pub_id):
 def add_comment(pub_id):
     """Ajouter un commentaire à une publication"""
     user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Non authentifié"}), 401
+    
     publication = Publication.query.get(pub_id)
 
     if not publication:
@@ -717,6 +744,9 @@ def get_comments(pub_id):
 def delete_comment(comment_id):
     """Supprimer un commentaire"""
     user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Non authentifié"}), 401
+    
     comment = Comment.query.get(comment_id)
 
     if not comment:
@@ -754,6 +784,9 @@ def notifications():
 def api_notifications():
     """API - Obtenir les notifications"""
     user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Non authentifié"}), 401
+    
     notifs = (
         Notification.query.filter_by(user_id=user.id)
         .order_by(Notification.created_at.desc())
@@ -831,6 +864,9 @@ def upload_ephemeral():
 
         # Créer l'entrée en base
         user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "Non authentifié"}), 401
+        
         ephemeral = EphemeralPhoto(
             filename=filename,
             sender_id=user.id,

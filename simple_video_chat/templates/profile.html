@@ -83,7 +83,7 @@
     {% if publications %}
     <div class="videos-grid">
         {% for pub in publications %}
-        <div class="video-card">
+        <div class="video-card" id="video-{{ pub.id }}">
             <a href="{{ url_for('watch', pub_id=pub.id) }}">
                 <div class="video-thumbnail">
                     <video preload="metadata" muted>

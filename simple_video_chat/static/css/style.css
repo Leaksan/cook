@@ -1416,6 +1416,28 @@ textarea.form-control {
 }
 
 @media (max-width: 480px) {
+    .navbar {
+        padding: 0.5rem;
+    }
+
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+
+    .navbar-brand i {
+        font-size: 1rem;
+    }
+
+    .nav-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .nav-link {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
     .main-container {
         padding: 1rem;
     }

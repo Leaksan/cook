@@ -469,6 +469,21 @@ def upload():
             flash("Aucun fichier selectionne (filename vide).", "danger")
             return redirect(url_for("upload"))
 
+        # Valider la catégorie
+        if not category_id:
+            flash("Veuillez sélectionner une catégorie.", "danger")
+            return redirect(url_for("upload"))
+
+        try:
+            category_id = int(category_id)
+            category = Category.query.get(category_id)
+            if not category:
+                flash("Catégorie invalide.", "danger")
+                return redirect(url_for("upload"))
+        except (ValueError, TypeError):
+            flash("Catégorie invalide.", "danger")
+            return redirect(url_for("upload"))
+
         if file and allowed_file(file.filename, Config.ALLOWED_VIDEO_EXTENSIONS):
             # S'assurer que le dossier existe
             os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -485,7 +500,7 @@ def upload():
                 filename=filename,
                 status="pending",
                 user_id=user.id,
-                category_id=int(category_id) if category_id else None,
+                category_id=category_id,
             )
 
             db.session.add(publication)

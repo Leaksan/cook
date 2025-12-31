@@ -54,6 +54,7 @@
     {% for user in users %}
     <div
         class="user-card {% if user.online %}online{% endif %}"
+        id="user-{{ user.username }}"
         data-username="{{ user.username }}"
         data-fullname="{{ user.fullname|lower }}"
         data-online="{{ 'true' if user.online else 'false' }}"

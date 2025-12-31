@@ -1515,3 +1515,49 @@ textarea.form-control {
 .hidden {
     display: none;
 }
+
+/* ============== PAGINATION ============== */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border-radius: var(--border-radius);
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    padding: 0.5rem 1rem;
+    background: var(--bg-darker);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.pagination-controls .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+    
+    .pagination-info {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .pagination-controls .btn {
+        flex: 1;
+        width: 100%;
+    }
+}
+
